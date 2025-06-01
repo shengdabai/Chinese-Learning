@@ -115,6 +115,8 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         3. Translation to {topic_input.native_language}
         4. A simple example sentence in Chinese
         5. Translation of the example sentence to {topic_input.native_language}
+        6. A useful sentence pattern/structure using this word
+        7. Explanation of the sentence pattern in {topic_input.native_language}
         
         Format as JSON with this structure:
         {{
@@ -124,12 +126,14 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
                     "pinyin": "nǐ hǎo",
                     "translation": "hello",
                     "example_sentence": "你好，很高兴见到你。",
-                    "example_translation": "Hello, nice to meet you."
+                    "example_translation": "Hello, nice to meet you.",
+                    "sentence_pattern": "你好 + [polite expression]",
+                    "pattern_explanation": "Use 你好 followed by a polite expression for formal greetings"
                 }}
             ]
         }}
         
-        Focus on practical, commonly used words that would be useful in conversations about {topic_input.topic}.
+        Focus on practical, commonly used words and provide useful sentence patterns that learners can apply in real conversations about {topic_input.topic}.
         """
         
         response = openai_client.chat.completions.create(
