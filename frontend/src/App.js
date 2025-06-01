@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
@@ -14,6 +14,16 @@ function App() {
   const [learningReport, setLearningReport] = useState(null);
   const [supportedLanguages, setSupportedLanguages] = useState([]);
   const [error, setError] = useState('');
+  
+  // Speech recognition states
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [dialogueTranslations, setDialogueTranslations] = useState([]);
+  const [showTranslations, setShowTranslations] = useState(false);
+  
+  // Speech refs
+  const recognitionRef = useRef(null);
+  const synthRef = useRef(null);
 
   useEffect(() => {
     fetchSupportedLanguages();
