@@ -27,7 +27,91 @@ function App() {
 
   useEffect(() => {
     fetchSupportedLanguages();
+    initializeSpeechRecognition();
   }, []);
+
+  const initializeSpeechRecognition = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'zh-CN'; // Chinese Mandarin
+      
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+        setError('');
+      };
+      
+      recognitionRef.current.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setCurrentMessage(transcript);
+      };
+      
+      recognitionRef.current.onerror = (event) => {
+        setError(`Speech recognition error: ${event.error}`);
+        setIsListening(false);
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+      
+      setSpeechSupported(true);
+      
+      // Initialize speech synthesis
+      if ('speechSynthesis' in window) {
+        synthRef.current = window.speechSynthesis;
+      }
+    } else {
+      console.log('Speech recognition not supported');
+      setSpeechSupported(false);
+    }
+  };
+
+  const startListening = () => {
+    if (recognitionRef.current && !isListening) {
+      setCurrentMessage('');
+      recognitionRef.current.start();
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
+  };
+
+  const speakText = (text, lang = 'zh-CN') => {
+    if (synthRef.current && text) {
+      // Stop any ongoing speech
+      synthRef.current.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 0.8;
+      utterance.pitch = 1;
+      
+      // Try to find a Chinese voice
+      const voices = synthRef.current.getVoices();
+      const chineseVoice = voices.find(voice => voice.lang.includes('zh'));
+      if (chineseVoice) {
+        utterance.voice = chineseVoice;
+      }
+      
+      synthRef.current.speak(utterance);
+    }
+  };
+
+  const convertToPinyin = (chineseText) => {
+    // This is a basic implementation - in production you might want to use the backend
+    // For now, we'll rely on the backend to provide pinyin
+    return chineseText;
+  };
 
   const fetchSupportedLanguages = async () => {
     try {
