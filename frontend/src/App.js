@@ -430,14 +430,28 @@ function App() {
         <div className="bg-white rounded-3xl shadow-2xl h-[80vh] flex flex-col">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-800">Conversation Practice: {topic}</h2>
-            <div className="flex justify-between items-center mt-2">
+            <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
               <p className="text-gray-600">Practice using your new vocabulary!</p>
-              <button
-                onClick={endSession}
-                className="py-2 px-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
-              >
-                End Session
-              </button>
+              <div className="flex gap-2">
+                {speechSupported && (
+                  <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    🎤 语音功能已启用
+                  </div>
+                )}
+                <button
+                  onClick={getDialogueTranslations}
+                  className="py-2 px-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  disabled={isLoading}
+                >
+                  获取翻译
+                </button>
+                <button
+                  onClick={endSession}
+                  className="py-2 px-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                >
+                  End Session
+                </button>
+              </div>
             </div>
           </div>
 
