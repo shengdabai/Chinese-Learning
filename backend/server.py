@@ -233,8 +233,19 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
             temperature=0.8
         )
         
-        # Parse response
-        ai_response = json.loads(response.choices[0].message.content)
+        # Get the response content
+        response_content = response.choices[0].message.content.strip()
+        
+        # Try to parse as JSON, if it fails, create a structured response
+        try:
+            ai_response = json.loads(response_content)
+        except json.JSONDecodeError:
+            # If the AI didn't return valid JSON, create a structured response
+            ai_response = {
+                "response": response_content,
+                "translation": f"Translation: {response_content}",
+                "suggestions": ["Continue the conversation", "Ask follow-up questions", "Practice more vocabulary"]
+            }
         
         # Update dialogue history
         dialogue_history.extend([
