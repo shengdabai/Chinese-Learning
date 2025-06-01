@@ -40,6 +40,11 @@ function App() {
       setError('Please enter a conversation topic');
       return;
     }
+    
+    if (topic.trim().length < 3) {
+      setError('Please enter a more detailed conversation topic (at least 3 characters)');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
