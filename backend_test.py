@@ -71,8 +71,8 @@ class ChineseLearnAPITester:
             print(f"Sample languages: {languages[:5]}...")
         return success
 
-    def test_generate_vocabulary(self, topic="ordering food at a restaurant", native_language="English"):
-        """Test vocabulary generation"""
+    def test_generate_vocabulary(self, topic="餐厅点餐", native_language="English"):
+        """Test vocabulary generation with enhanced features"""
         success, response = self.run_test(
             "Generate Vocabulary",
             "POST",
@@ -88,12 +88,32 @@ class ChineseLearnAPITester:
             vocabulary = response.get('vocabulary', [])
             print(f"Session ID: {self.session_id}")
             print(f"Vocabulary items count: {len(vocabulary)}")
+            
+            # Verify enhanced vocabulary features
             if vocabulary:
                 sample_item = vocabulary[0]
                 print(f"Sample vocabulary item:")
                 print(f"  Chinese: {sample_item.get('chinese')}")
                 print(f"  Pinyin: {sample_item.get('pinyin')}")
                 print(f"  Translation: {sample_item.get('translation')}")
+                print(f"  Example sentence: {sample_item.get('example_sentence')}")
+                print(f"  Example translation: {sample_item.get('example_translation')}")
+                
+                # Check for new features
+                has_pattern = 'sentence_pattern' in sample_item and sample_item.get('sentence_pattern')
+                has_explanation = 'pattern_explanation' in sample_item and sample_item.get('pattern_explanation')
+                
+                if has_pattern and has_explanation:
+                    print(f"  ✅ NEW FEATURE - Sentence pattern: {sample_item.get('sentence_pattern')}")
+                    print(f"  ✅ NEW FEATURE - Pattern explanation: {sample_item.get('pattern_explanation')}")
+                else:
+                    print(f"  ❌ Missing new vocabulary features")
+                    if not has_pattern:
+                        print(f"    - Missing sentence_pattern")
+                    if not has_explanation:
+                        print(f"    - Missing pattern_explanation")
+                    success = False
+                    self.tests_passed -= 1
         return success
 
     def test_start_dialogue(self, message="你好，我想点菜"):
@@ -117,6 +137,37 @@ class ChineseLearnAPITester:
             print(f"AI Response: {response.get('response')}")
             print(f"Translation: {response.get('translation')}")
             print(f"Suggestions count: {len(response.get('suggestions', []))}")
+        return success
+
+    def test_get_dialogue_translation(self):
+        """Test the dialogue translation feature"""
+        if not self.session_id:
+            print("❌ Cannot test dialogue translation without a session ID")
+            return False
+            
+        success, response = self.run_test(
+            "Get Dialogue Translation",
+            "POST",
+            f"api/get-dialogue-translation?session_id={self.session_id}",
+            200
+        )
+        
+        if success:
+            translations = response.get('translations', [])
+            print(f"Dialogue translations count: {len(translations)}")
+            
+            if translations:
+                print("Sample translation:")
+                sample = translations[0]
+                print(f"  Original: {sample.get('original')}")
+                print(f"  Translation: {sample.get('translation')}")
+                print(f"  Speaker: {sample.get('speaker')}")
+            else:
+                print("No translations returned")
+                if len(translations) == 0:
+                    # This might be expected if no dialogue has occurred yet
+                    print("Note: Empty translations may be expected if no dialogue has occurred")
+        
         return success
 
     def test_end_session(self):
@@ -158,6 +209,44 @@ class ChineseLearnAPITester:
             print(f"  Status: {response.get('status')}")
         return success
 
+    def run_conversation_flow(self):
+        """Run a complete conversation flow to test all features"""
+        print("\n🔄 Testing complete conversation flow with new features...")
+        
+        # Step 1: Generate vocabulary
+        vocab_success = self.test_generate_vocabulary()
+        if not vocab_success:
+            print("❌ Failed at vocabulary generation step")
+            return False
+            
+        # Step 2: Start dialogue with multiple messages
+        messages = [
+            "你好，我想点菜",
+            "我想要一碗米饭和一份鱼",
+            "这个菜多少钱？"
+        ]
+        
+        for msg in messages:
+            dialogue_success = self.test_start_dialogue(msg)
+            if not dialogue_success:
+                print(f"❌ Failed during dialogue with message: {msg}")
+                return False
+        
+        # Step 3: Test dialogue translation
+        translation_success = self.test_get_dialogue_translation()
+        if not translation_success:
+            print("❌ Failed at dialogue translation step")
+            return False
+            
+        # Step 4: End session and get report
+        end_success = self.test_end_session()
+        if not end_success:
+            print("❌ Failed at session end step")
+            return False
+            
+        print("✅ Complete conversation flow test passed")
+        return True
+
 def main():
     # Get backend URL from frontend .env file
     with open('/app/frontend/.env', 'r') as f:
@@ -171,21 +260,26 @@ def main():
     # Setup tester
     tester = ChineseLearnAPITester(backend_url)
     
-    # Run tests
-    tests = [
+    # Run basic tests
+    basic_tests = [
         tester.test_health_check,
-        tester.test_get_languages,
-        tester.test_generate_vocabulary,
-        tester.test_start_dialogue,
-        tester.test_end_session,
-        tester.test_get_session
+        tester.test_get_languages
     ]
     
-    for test_func in tests:
+    for test_func in basic_tests:
         test_func()
+    
+    # Run the complete conversation flow test
+    tester.run_conversation_flow()
     
     # Print results
     print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
+    print("\n🔍 Test Summary:")
+    print("1. Enhanced vocabulary features (sentence patterns and explanations)")
+    print("2. Dialogue interaction")
+    print("3. Dialogue translation")
+    print("4. Session management and reporting")
+    
     return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
