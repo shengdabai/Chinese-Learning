@@ -49,6 +49,8 @@ class VocabularyItem(BaseModel):
     translation: str
     example_sentence: str
     example_translation: str
+    sentence_pattern: str
+    pattern_explanation: str
 
 class VocabularyResponse(BaseModel):
     session_id: str
