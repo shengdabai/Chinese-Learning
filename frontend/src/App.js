@@ -135,12 +135,11 @@ function App() {
   const endSession = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/end-session`, {
+      const response = await fetch(`${API_BASE_URL}/api/end-session?session_id=${sessionData.session_id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sessionData.session_id),
       });
 
       if (!response.ok) {
