@@ -381,14 +381,31 @@ function App() {
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {sessionData?.vocabulary.map((item, index) => (
               <div key={index} className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl p-6 border-l-4 border-green-500">
-                <div className="mb-3">
-                  <div className="text-2xl font-bold text-gray-800 mb-1">{item.chinese}</div>
-                  <div className="text-lg text-gray-600 mb-2">{item.pinyin}</div>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-2xl font-bold text-gray-800">{item.chinese}</div>
+                    <button
+                      onClick={() => speakText(item.chinese)}
+                      className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+                      title="发音"
+                    >
+                      🔊
+                    </button>
+                  </div>
+                  <div className="text-lg text-gray-600 mb-2 pinyin-text">{item.pinyin}</div>
                   <div className="text-lg font-semibold text-green-700">{item.translation}</div>
                 </div>
-                <div className="border-t border-green-200 pt-3">
-                  <div className="text-gray-800 mb-1">{item.example_sentence}</div>
+                
+                <div className="border-t border-green-200 pt-3 mb-3">
+                  <div className="text-sm font-semibold text-green-800 mb-1">例句 Example:</div>
+                  <div className="text-gray-800 mb-1 chinese-text">{item.example_sentence}</div>
                   <div className="text-gray-600 text-sm">{item.example_translation}</div>
+                </div>
+                
+                <div className="border-t border-green-200 pt-3">
+                  <div className="text-sm font-semibold text-green-800 mb-1">句型 Pattern:</div>
+                  <div className="text-gray-800 mb-1 font-mono bg-green-50 px-2 py-1 rounded">{item.sentence_pattern}</div>
+                  <div className="text-gray-600 text-sm">{item.pattern_explanation}</div>
                 </div>
               </div>
             ))}
