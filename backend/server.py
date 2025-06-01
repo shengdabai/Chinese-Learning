@@ -271,6 +271,65 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in dialogue: {str(e)}")
 
+@app.post("/api/get-dialogue-translation")
+async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
+    try:
+        # Get session data
+        session = await sessions_collection.find_one({"session_id": session_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        dialogue_history = session.get("dialogue_history", [])
+        if not dialogue_history:
+            return {"translations": []}
+        
+        # Prepare dialogue for translation
+        dialogue_text = ""
+        for msg in dialogue_history:
+            speaker = "用户" if msg["is_user"] else "老师"
+            dialogue_text += f"{speaker}: {msg['message']}\n"
+        
+        # Generate complete translation
+        translation_prompt = f"""
+        Please translate this complete Chinese learning dialogue to {session['native_language']}.
+        Provide a natural, flowing translation that maintains the conversational context.
+        
+        Dialogue:
+        {dialogue_text}
+        
+        Format as JSON:
+        {{
+            "dialogue_translations": [
+                {{
+                    "original": "original message",
+                    "translation": "translated message",
+                    "speaker": "user/teacher",
+                    "is_user": true/false
+                }}
+            ]
+        }}
+        """
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": f"You are a professional translator specializing in Chinese to {session['native_language']} translation. Respond only with valid JSON."},
+                {"role": "user", "content": translation_prompt}
+            ],
+            temperature=0.3
+        )
+        
+        translation_data = json.loads(response.choices[0].message.content)
+        
+        return {
+            "session_id": session_id,
+            "topic": session["topic"],
+            "translations": translation_data.get("dialogue_translations", [])
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting dialogue translation: {str(e)}")
+
 @app.post("/api/end-session")
 async def end_session_and_generate_report(session_id: str) -> LearningReport:
     try:
