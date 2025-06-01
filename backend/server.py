@@ -1,75 +1,378 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
+from dotenv import load_dotenv
 import uuid
+import json
 from datetime import datetime
+from motor.motor_asyncio import AsyncIOMotorClient
+from openai import OpenAI
+import pinyin
 
+# Load environment variables
+load_dotenv()
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# Create the main app without a prefix
 app = FastAPI()
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
-
-
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# MongoDB connection
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+client = AsyncIOMotorClient(MONGO_URL)
+db = client['chinese_learning_db']
+sessions_collection = db['learning_sessions']
+progress_collection = db['user_progress']
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+# OpenAI client
+openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+# Pydantic models
+class LanguageSelection(BaseModel):
+    native_language: str
+
+class TopicInput(BaseModel):
+    topic: str
+    native_language: str
+
+class VocabularyItem(BaseModel):
+    chinese: str
+    pinyin: str
+    translation: str
+    example_sentence: str
+    example_translation: str
+
+class VocabularyResponse(BaseModel):
+    session_id: str
+    topic: str
+    vocabulary: List[VocabularyItem]
+
+class DialogueMessage(BaseModel):
+    session_id: str
+    message: str
+    is_user: bool
+
+class DialogueResponse(BaseModel):
+    response: str
+    translation: str
+    suggestions: List[str]
+
+class LearningReport(BaseModel):
+    session_id: str
+    topic: str
+    vocabulary_learned: int
+    dialogue_turns: int
+    strengths: List[str]
+    areas_for_improvement: List[str]
+    suggestions: List[str]
+    overall_score: int
+
+# Supported languages
+SUPPORTED_LANGUAGES = [
+    "English", "Spanish", "French", "German", "Italian", "Portuguese", 
+    "Russian", "Japanese", "Korean", "Arabic", "Hindi", "Dutch", 
+    "Swedish", "Norwegian", "Danish", "Finnish", "Polish", "Czech",
+    "Hungarian", "Turkish", "Greek", "Hebrew", "Thai", "Vietnamese"
+]
+
+def convert_to_pinyin(chinese_text: str) -> str:
+    """Convert Chinese characters to Pinyin"""
+    try:
+        return pinyin.get(chinese_text, format="strip", delimiter=" ")
+    except:
+        return chinese_text
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "service": "Chinese Learning Agent"}
+
+@app.get("/api/languages")
+async def get_supported_languages():
+    return {"languages": SUPPORTED_LANGUAGES}
+
+@app.post("/api/generate-vocabulary")
+async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
+    try:
+        session_id = str(uuid.uuid4())
+        
+        # Create prompt for vocabulary generation
+        prompt = f"""
+        Generate 8 essential Chinese vocabulary words related to the topic: "{topic_input.topic}"
+        
+        For each word, provide:
+        1. Chinese character(s)
+        2. Pinyin pronunciation
+        3. Translation to {topic_input.native_language}
+        4. A simple example sentence in Chinese
+        5. Translation of the example sentence to {topic_input.native_language}
+        
+        Format as JSON with this structure:
+        {{
+            "vocabulary": [
+                {{
+                    "chinese": "你好",
+                    "pinyin": "nǐ hǎo",
+                    "translation": "hello",
+                    "example_sentence": "你好，很高兴见到你。",
+                    "example_translation": "Hello, nice to meet you."
+                }}
+            ]
+        }}
+        
+        Focus on practical, commonly used words that would be useful in conversations about {topic_input.topic}.
+        """
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": f"You are a Chinese language teacher helping students learn vocabulary. Always respond with valid JSON. Translate to {topic_input.native_language}."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        
+        # Parse the response
+        vocabulary_data = json.loads(response.choices[0].message.content)
+        vocabulary_items = []
+        
+        for item in vocabulary_data["vocabulary"]:
+            # Convert to pinyin if not provided correctly
+            if not item.get("pinyin") or item["pinyin"] == item["chinese"]:
+                item["pinyin"] = convert_to_pinyin(item["chinese"])
+            
+            vocabulary_items.append(VocabularyItem(**item))
+        
+        # Store session in database
+        session_data = {
+            "session_id": session_id,
+            "topic": topic_input.topic,
+            "native_language": topic_input.native_language,
+            "vocabulary": [item.dict() for item in vocabulary_items],
+            "created_at": datetime.now(),
+            "dialogue_history": [],
+            "status": "vocabulary_generated"
+        }
+        
+        await sessions_collection.insert_one(session_data)
+        
+        return VocabularyResponse(
+            session_id=session_id,
+            topic=topic_input.topic,
+            vocabulary=vocabulary_items
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating vocabulary: {str(e)}")
+
+@app.post("/api/start-dialogue")
+async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
+    try:
+        # Get session data
+        session = await sessions_collection.find_one({"session_id": message.session_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Build conversation context
+        dialogue_history = session.get("dialogue_history", [])
+        vocabulary_context = "\n".join([
+            f"- {item['chinese']} ({item['pinyin']}) - {item['translation']}"
+            for item in session["vocabulary"]
+        ])
+        
+        # Create dialogue prompt
+        system_prompt = f"""
+        You are a Chinese language teacher conducting a conversation practice session about "{session['topic']}".
+        
+        Vocabulary for this session:
+        {vocabulary_context}
+        
+        Guidelines:
+        1. Respond primarily in Chinese with some {session['native_language']} explanations when needed
+        2. Use vocabulary from the lesson when appropriate
+        3. Keep responses at beginner-intermediate level
+        4. Be encouraging and provide gentle corrections
+        5. Ask follow-up questions to continue the conversation
+        6. If the student makes mistakes, provide gentle corrections
+        
+        Format your response as JSON:
+        {{
+            "response": "Your Chinese response with some {session['native_language']} if needed",
+            "translation": "Full translation to {session['native_language']}",
+            "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
+        }}
+        """
+        
+        # Build message history for context
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add previous dialogue history
+        for hist_msg in dialogue_history[-6:]:  # Keep last 6 messages for context
+            role = "user" if hist_msg["is_user"] else "assistant"
+            messages.append({"role": role, "content": hist_msg["message"]})
+        
+        # Add current user message
+        messages.append({"role": "user", "content": message.message})
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.8
+        )
+        
+        # Parse response
+        ai_response = json.loads(response.choices[0].message.content)
+        
+        # Update dialogue history
+        dialogue_history.extend([
+            {
+                "message": message.message,
+                "is_user": True,
+                "timestamp": datetime.now()
+            },
+            {
+                "message": ai_response["response"],
+                "is_user": False,
+                "timestamp": datetime.now()
+            }
+        ])
+        
+        # Update session in database
+        await sessions_collection.update_one(
+            {"session_id": message.session_id},
+            {
+                "$set": {
+                    "dialogue_history": dialogue_history,
+                    "status": "dialogue_active",
+                    "last_updated": datetime.now()
+                }
+            }
+        )
+        
+        return DialogueResponse(
+            response=ai_response["response"],
+            translation=ai_response["translation"],
+            suggestions=ai_response["suggestions"]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error in dialogue: {str(e)}")
+
+@app.post("/api/end-session")
+async def end_session_and_generate_report(session_id: str) -> LearningReport:
+    try:
+        # Get session data
+        session = await sessions_collection.find_one({"session_id": session_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        dialogue_history = session.get("dialogue_history", [])
+        vocabulary_count = len(session.get("vocabulary", []))
+        dialogue_turns = len([msg for msg in dialogue_history if msg["is_user"]])
+        
+        # Generate learning report using GPT
+        report_prompt = f"""
+        Analyze this Chinese learning session and create a comprehensive learning report.
+        
+        Session Details:
+        - Topic: {session['topic']}
+        - Vocabulary words learned: {vocabulary_count}
+        - Dialogue turns: {dialogue_turns}
+        - Native language: {session['native_language']}
+        
+        Dialogue History (last 10 messages):
+        {json.dumps(dialogue_history[-10:], indent=2, default=str)}
+        
+        Create a detailed learning report in JSON format:
+        {{
+            "strengths": ["strength1", "strength2", "strength3"],
+            "areas_for_improvement": ["area1", "area2", "area3"],
+            "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+            "overall_score": 85
+        }}
+        
+        Focus on:
+        - Vocabulary usage and retention
+        - Conversation flow and engagement
+        - Grammar and sentence structure
+        - Areas that need more practice
+        - Encouraging feedback
+        
+        Score should be 1-100 based on engagement, vocabulary usage, and conversation quality.
+        """
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": f"You are an expert Chinese language teacher creating learning reports. Respond only with valid JSON. Be encouraging but constructive. Use {session['native_language']} for explanations."},
+                {"role": "user", "content": report_prompt}
+            ],
+            temperature=0.6
+        )
+        
+        report_data = json.loads(response.choices[0].message.content)
+        
+        # Create learning report
+        learning_report = LearningReport(
+            session_id=session_id,
+            topic=session["topic"],
+            vocabulary_learned=vocabulary_count,
+            dialogue_turns=dialogue_turns,
+            strengths=report_data["strengths"],
+            areas_for_improvement=report_data["areas_for_improvement"],
+            suggestions=report_data["suggestions"],
+            overall_score=report_data["overall_score"]
+        )
+        
+        # Update session status
+        await sessions_collection.update_one(
+            {"session_id": session_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "learning_report": learning_report.dict(),
+                    "completed_at": datetime.now()
+                }
+            }
+        )
+        
+        # Store in progress collection for user tracking
+        await progress_collection.insert_one({
+            "session_id": session_id,
+            "topic": session["topic"],
+            "native_language": session["native_language"],
+            "score": learning_report.overall_score,
+            "vocabulary_count": vocabulary_count,
+            "dialogue_turns": dialogue_turns,
+            "created_at": datetime.now()
+        })
+        
+        return learning_report
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
+
+@app.get("/api/session/{session_id}")
+async def get_session(session_id: str):
+    try:
+        session = await sessions_collection.find_one({"session_id": session_id})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Convert ObjectId to string for JSON serialization
+        session["_id"] = str(session["_id"])
+        return session
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving session: {str(e)}")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
