@@ -330,7 +330,23 @@ async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
             temperature=0.3
         )
         
-        translation_data = json.loads(response.choices[0].message.content)
+        # Try to parse the response
+        response_content = response.choices[0].message.content.strip()
+        try:
+            translation_data = json.loads(response_content)
+        except json.JSONDecodeError:
+            # If JSON parsing fails, create a basic structure
+            translation_data = {
+                "dialogue_translations": [
+                    {
+                        "original": msg["message"],
+                        "translation": f"Translation of: {msg['message']}",
+                        "speaker": "user" if msg["is_user"] else "teacher",
+                        "is_user": msg["is_user"]
+                    }
+                    for msg in dialogue_history
+                ]
+            }
         
         return {
             "session_id": session_id,
