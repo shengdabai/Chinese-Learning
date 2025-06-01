@@ -511,6 +511,20 @@ function App() {
                 className="flex-1 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-lg"
                 disabled={isLoading}
               />
+              {speechSupported && (
+                <button
+                  onClick={isListening ? stopListening : startListening}
+                  className={`py-4 px-4 rounded-xl font-semibold transition-colors ${
+                    isListening 
+                      ? 'bg-red-600 text-white hover:bg-red-700' 
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                  disabled={isLoading}
+                  title={isListening ? "停止录音" : "开始语音输入"}
+                >
+                  {isListening ? '🛑' : '🎤'}
+                </button>
+              )}
               <button
                 onClick={sendMessage}
                 disabled={isLoading || !currentMessage.trim()}
@@ -519,6 +533,11 @@ function App() {
                 Send
               </button>
             </div>
+            {isListening && (
+              <div className="mt-2 text-center text-sm text-gray-600">
+                🎤 正在录音... 请说中文
+              </div>
+            )}
           </div>
         </div>
       </div>
