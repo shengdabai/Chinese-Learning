@@ -295,7 +295,17 @@ function App() {
     setDialogueMessages([]);
     setCurrentMessage('');
     setLearningReport(null);
+    setDialogueTranslations([]);
+    setShowTranslations(false);
     setError('');
+    
+    // Stop any ongoing speech
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
   };
 
   const renderLanguageSelection = () => (
