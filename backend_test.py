@@ -128,9 +128,8 @@ class ChineseLearnAPITester:
         success, response = self.run_test(
             "End Session",
             "POST",
-            "api/end-session",
-            200,
-            data=self.session_id
+            f"api/end-session?session_id={self.session_id}",
+            200
         )
         if success:
             print(f"Learning report:")
