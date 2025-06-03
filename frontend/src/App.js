@@ -964,40 +964,48 @@ function App() {
               </div>
             </div>
 
-            {/* Pronunciation & Grammar Insights */}
-            {(learningReport?.pronunciation_feedback?.length > 0 || learningReport?.grammar_insights?.length > 0) && (
-              <div className="bg-teal-100 rounded-2xl p-6">
-                <h3 className="text-xl font-bold text-teal-800 mb-3">🎤 Learning Insights 学习洞察</h3>
-                
-                {learningReport?.pronunciation_feedback?.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="font-semibold text-teal-700 mb-2">🔊 Pronunciation Tips:</h4>
-                    <ul className="text-sm text-teal-600 space-y-1">
-                      {learningReport.pronunciation_feedback.map((tip, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="mr-2">🎵</span>
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {learningReport?.grammar_insights?.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-teal-700 mb-2">📝 Grammar Insights:</h4>
-                    <ul className="text-sm text-teal-600 space-y-1">
-                      {learningReport.grammar_insights.map((insight, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="mr-2">📖</span>
-                          {insight}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            {/* Dialogue Translation & Analysis Section */}
+            <div className="bg-teal-100 rounded-2xl p-6">
+              <h3 className="text-xl font-bold text-teal-800 mb-3">💬 对话翻译与分析</h3>
+              
+              {/* Show translations for recent dialogue */}
+              <div className="mb-4">
+                <h4 className="font-semibold text-teal-700 mb-2">🗣️ 对话翻译:</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {dialogueMessages.slice(-4).map((msg, index) => (
+                    <div key={index} className={`p-2 rounded text-sm ${
+                      msg.isUser ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-green-50 border-l-4 border-green-400'
+                    }`}>
+                      <div className="font-medium chinese-text">{msg.message}</div>
+                      {msg.translation && (
+                        <div className="text-gray-600 mt-1">{msg.translation}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
+
+              {/* Learning suggestions from dialogue */}
+              <div>
+                <h4 className="font-semibold text-teal-700 mb-2">📚 对话学习建议:</h4>
+                <div className="space-y-1">
+                  {dialogueMessages
+                    .filter(msg => !msg.isUser && msg.suggestions && msg.suggestions.length > 0)
+                    .slice(-3)
+                    .map((msg, index) => (
+                      <div key={index} className="text-sm text-teal-600">
+                        {msg.suggestions.map((suggestion, idx) => (
+                          <div key={idx} className="flex items-start mb-1">
+                            <span className="mr-2">💡</span>
+                            {suggestion}
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
