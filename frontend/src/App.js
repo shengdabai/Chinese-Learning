@@ -667,9 +667,9 @@ function App() {
           </button>
 
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-800">Conversation Practice: {topic}</h2>
+            <h2 className="text-2xl font-bold text-gray-800">对话练习: {topic}</h2>
             <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
-              <p className="text-gray-600">Practice using your new vocabulary!</p>
+              <p className="text-gray-600">使用学到的词汇进行中文对话练习</p>
               <div className="flex gap-2">
                 {speechSupported && (
                   <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
