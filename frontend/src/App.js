@@ -350,6 +350,23 @@ function App() {
     }
   };
 
+  const openSettings = () => {
+    setShowSettings(true);
+  };
+
+  const closeSettings = () => {
+    setShowSettings(false);
+  };
+
+  const changeLanguage = (language) => {
+    saveLanguagePreference(language);
+    setShowSettings(false);
+    // If user is in the middle of a session, they might want to restart with new language
+    if (currentStep !== 'topic-input') {
+      startNewTopic();
+    }
+  };
+
   const renderLanguageSelection = () => (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-yellow-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
