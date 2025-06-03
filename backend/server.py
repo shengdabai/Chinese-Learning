@@ -250,12 +250,20 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         # Try to parse as JSON, if it fails, create a structured response
         try:
             ai_response = json.loads(response_content)
+            # Ensure pinyin is provided
+            if "pinyin" not in ai_response or not ai_response["pinyin"]:
+                ai_response["pinyin"] = convert_to_pinyin(ai_response.get("response", ""))
+            # Ensure errors_detected is provided
+            if "errors_detected" not in ai_response:
+                ai_response["errors_detected"] = []
         except json.JSONDecodeError:
             # If the AI didn't return valid JSON, create a structured response
             ai_response = {
                 "response": response_content,
                 "translation": f"Translation: {response_content}",
-                "suggestions": ["Continue the conversation", "Ask follow-up questions", "Practice more vocabulary"]
+                "pinyin": convert_to_pinyin(response_content),
+                "suggestions": ["Continue the conversation", "Ask follow-up questions", "Practice more vocabulary"],
+                "errors_detected": []
             }
         
         # Update dialogue history
