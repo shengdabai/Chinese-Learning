@@ -165,9 +165,20 @@ def convert_to_pinyin(chinese_text: str) -> str:
     except:
         return chinese_text
 
+@app.on_event("startup")
+async def startup_event():
+    """Check database permissions on startup"""
+    await check_database_permissions()
+
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "service": "Chinese Learning Agent"}
+    db_status = "connected" if DATABASE_AVAILABLE else "fallback_mode"
+    return {
+        "status": "healthy", 
+        "service": "Chinese Learning Agent",
+        "database": db_status,
+        "storage": "mongodb" if DATABASE_AVAILABLE else "memory"
+    }
 
 @app.get("/api/languages")
 async def get_supported_languages():
