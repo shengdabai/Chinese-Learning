@@ -27,8 +27,9 @@ app.add_middleware(
 
 # MongoDB connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+DB_NAME = os.environ.get('DB_NAME', 'test_database')
 client = AsyncIOMotorClient(MONGO_URL)
-db = client['chinese_learning_db']
+db = client[DB_NAME]
 sessions_collection = db['learning_sessions']
 progress_collection = db['user_progress']
 
