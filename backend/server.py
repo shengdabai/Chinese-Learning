@@ -485,7 +485,7 @@ async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
 async def end_session_and_generate_report(session_id: str) -> LearningReport:
     try:
         # Get session data
-        session = await sessions_collection.find_one({"session_id": session_id})
+        session = await get_session_data(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
