@@ -155,64 +155,84 @@ function App() {
       // Stop any ongoing speech
       synthRef.current.cancel();
       
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.rate = 0.8; // Slightly slower for learning
-      utterance.pitch = 1.0;
-      utterance.volume = 0.9;
+      // Clean the text - only speak Chinese characters, remove pinyin and other annotations
+      const chineseText = text.replace(/[a-zA-Z\u0100-\u017F\u1E00-\u1EFF]/g, '').trim();
+      if (!chineseText) return;
       
-      // Enhanced Chinese voice selection with priority order
+      const utterance = new SpeechSynthesisUtterance(chineseText);
+      utterance.lang = lang;
+      utterance.rate = 0.75; // Slower for learning
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      // Enhanced Chinese voice selection with better quality priority
       const voices = synthRef.current.getVoices();
       let selectedVoice = null;
       
-      // Priority order for Chinese voices (best quality first)
+      // Priority order for high-quality Chinese voices
       const preferredVoices = [
-        // Mandarin Chinese voices (mainland)
+        // Windows high-quality voices
+        'Microsoft Xiaoxiao - Chinese (Simplified, PRC)',
         'Microsoft Yaoyao - Chinese (Simplified, PRC)',
-        'Microsoft Kangkang - Chinese (Simplified, PRC)', 
+        'Microsoft Kangkang - Chinese (Simplified, PRC)',
         'Microsoft Huihui - Chinese (Simplified, PRC)',
+        // Google/Chrome voices
         'Google 普通话（中国大陆）',
-        'Chinese (China)',
-        'zh-CN',
-        // Fallback to any Chinese voice
-        'Chinese',
-        'Mandarin'
+        'Google Chinese (China)',
+        // macOS voices
+        'Ting-Ting',
+        'Sin-ji',
+        // Android voices
+        'CMU_US_CLB',
+        // Generic fallbacks
+        'Chinese Female',
+        'Chinese Male'
       ];
       
       // Find the best available Chinese voice
       for (const preferredName of preferredVoices) {
         selectedVoice = voices.find(voice => 
-          voice.name.includes(preferredName) || 
-          voice.lang.includes('zh-CN') ||
-          voice.lang.includes('zh')
+          voice.name.includes(preferredName) ||
+          (voice.lang.includes('zh-CN') && voice.name.toLowerCase().includes('chinese'))
         );
         if (selectedVoice) break;
       }
       
-      // Additional filtering for quality voices
+      // If still no voice found, find any Chinese voice
       if (!selectedVoice) {
         selectedVoice = voices.find(voice => 
-          voice.lang.startsWith('zh') && 
-          (voice.name.includes('Microsoft') || voice.name.includes('Google'))
+          voice.lang.startsWith('zh') ||
+          voice.name.toLowerCase().includes('chinese') ||
+          voice.name.toLowerCase().includes('mandarin')
+        );
+      }
+      
+      // Prefer female voices for language learning (generally clearer)
+      if (!selectedVoice) {
+        selectedVoice = voices.find(voice => 
+          voice.lang.includes('zh') && 
+          (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('xiaoxiao'))
         );
       }
       
       if (selectedVoice) {
         utterance.voice = selectedVoice;
-        console.log('Using voice:', selectedVoice.name, selectedVoice.lang);
+        console.log('🔊 Using voice:', selectedVoice.name, selectedVoice.lang);
+      } else {
+        console.log('⚠️ No Chinese voice found, using default');
       }
       
-      // Add speech event handlers for better user feedback
+      // Add speech event handlers
       utterance.onstart = () => {
-        console.log('Speech started');
+        console.log('🗣️ Speech started:', chineseText);
       };
       
       utterance.onend = () => {
-        console.log('Speech ended');
+        console.log('✅ Speech ended');
       };
       
       utterance.onerror = (event) => {
-        console.error('Speech error:', event.error);
+        console.error('❌ Speech error:', event.error);
       };
       
       synthRef.current.speak(utterance);
