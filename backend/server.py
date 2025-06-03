@@ -274,8 +274,9 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
             "status": "vocabulary_generated"
         }
         
-        await sessions_collection.insert_one(session_data)
-        print(f"💾 Session saved to database with ID: {session_id}")
+        db_saved = await save_session_data(session_data)
+        storage_type = "database" if db_saved else "memory"
+        print(f"💾 Session saved to {storage_type} with ID: {session_id}")
         
         return VocabularyResponse(
             session_id=session_id,
