@@ -295,7 +295,9 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         return DialogueResponse(
             response=ai_response["response"],
             translation=ai_response["translation"],
-            suggestions=ai_response["suggestions"]
+            pinyin=ai_response["pinyin"],
+            suggestions=ai_response["suggestions"],
+            errors_detected=ai_response["errors_detected"]
         )
         
     except Exception as e:
