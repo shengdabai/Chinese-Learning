@@ -109,6 +109,7 @@ async def get_supported_languages():
 @app.post("/api/generate-vocabulary")
 async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
     try:
+        print(f"🚀 Starting vocabulary generation for topic: '{topic_input.topic}' in {topic_input.native_language}")
         session_id = str(uuid.uuid4())
         
         # Create prompt for vocabulary generation
@@ -142,25 +143,47 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         Focus on practical, commonly used words and provide useful sentence patterns that learners can apply in real conversations about {topic_input.topic}.
         """
         
+        print("📞 Calling OpenAI API...")
+        start_time = datetime.now()
+        
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"You are a Chinese language teacher helping students learn vocabulary. Always respond with valid JSON. Translate to {topic_input.native_language}."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7
+            temperature=0.7,
+            max_tokens=3000,
+            timeout=30  # 30 second timeout
         )
         
+        end_time = datetime.now()
+        print(f"⏱️ OpenAI API call took: {(end_time - start_time).total_seconds():.2f} seconds")
+        print(f"✅ OpenAI API response received")
+        
         # Parse the response
-        vocabulary_data = json.loads(response.choices[0].message.content)
+        response_content = response.choices[0].message.content.strip()
+        print(f"📄 Raw response length: {len(response_content)} characters")
+        
+        try:
+            vocabulary_data = json.loads(response_content)
+            print(f"✅ JSON parsing successful")
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON parsing failed: {e}")
+            print(f"📄 Response content: {response_content[:500]}...")
+            raise HTTPException(status_code=500, detail=f"Invalid JSON response from AI: {str(e)}")
+        
         vocabulary_items = []
         
-        for item in vocabulary_data["vocabulary"]:
+        for i, item in enumerate(vocabulary_data["vocabulary"]):
+            print(f"Processing vocabulary item {i+1}: {item.get('chinese', 'N/A')}")
             # Convert to pinyin if not provided correctly
             if not item.get("pinyin") or item["pinyin"] == item["chinese"]:
                 item["pinyin"] = convert_to_pinyin(item["chinese"])
             
             vocabulary_items.append(VocabularyItem(**item))
+        
+        print(f"✅ Created {len(vocabulary_items)} vocabulary items")
         
         # Store session in database
         session_data = {
@@ -174,6 +197,7 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         }
         
         await sessions_collection.insert_one(session_data)
+        print(f"💾 Session saved to database with ID: {session_id}")
         
         return VocabularyResponse(
             session_id=session_id,
@@ -182,6 +206,10 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         )
         
     except Exception as e:
+        print(f"❌ Error in generate_vocabulary: {str(e)}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error generating vocabulary: {str(e)}")
 
 @app.post("/api/start-dialogue")
