@@ -413,31 +413,6 @@ function App() {
     }
   };
 
-  const getDialogueTranslations = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/get-dialogue-translation?session_id=${sessionData.session_id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get translations');
-      }
-
-      const data = await response.json();
-      setDialogueTranslations(data.translations);
-      setShowTranslations(true);
-    } catch (error) {
-      console.error('Error getting translations:', error);
-      setError('Failed to get dialogue translations.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const endSession = async () => {
     setIsLoading(true);
     try {
