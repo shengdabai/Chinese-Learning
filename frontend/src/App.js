@@ -787,49 +787,160 @@ function App() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
+          {/* Left Column */}
           <div className="space-y-6">
             <div className="bg-green-100 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-green-800 mb-3">✅ Strengths</h3>
+              <h3 className="text-xl font-bold text-green-800 mb-3">✅ Strengths 优势</h3>
               <ul className="space-y-2">
                 {learningReport?.strengths.map((strength, index) => (
-                  <li key={index} className="text-green-700">• {strength}</li>
+                  <li key={index} className="text-green-700 flex items-start">
+                    <span className="mr-2">🌟</span>
+                    {strength}
+                  </li>
                 ))}
               </ul>
             </div>
 
             <div className="bg-blue-100 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-blue-800 mb-3">💡 Suggestions</h3>
+              <h3 className="text-xl font-bold text-blue-800 mb-3">💡 Suggestions 建议</h3>
               <ul className="space-y-2">
                 {learningReport?.suggestions.map((suggestion, index) => (
-                  <li key={index} className="text-blue-700">• {suggestion}</li>
+                  <li key={index} className="text-blue-700 flex items-start">
+                    <span className="mr-2">💡</span>
+                    {suggestion}
+                  </li>
                 ))}
               </ul>
             </div>
+
+            {/* Error Analysis Section */}
+            {learningReport?.errors_analysis && learningReport.errors_analysis.length > 0 && (
+              <div className="bg-orange-100 rounded-2xl p-6">
+                <h3 className="text-xl font-bold text-orange-800 mb-3">🔍 Error Analysis 错误分析</h3>
+                <div className="space-y-3">
+                  {learningReport.errors_analysis.map((error, index) => (
+                    <div key={index} className="bg-white rounded-lg p-3 border-l-4 border-orange-400">
+                      <div className="font-semibold text-orange-800 mb-1">{error.error_type}</div>
+                      <div className="text-sm text-gray-700 mb-2">{error.description}</div>
+                      {error.example && (
+                        <div className="text-sm">
+                          <span className="text-red-600 line-through chinese-text">{error.example}</span>
+                          <span className="mx-2">→</span>
+                          <span className="text-green-600 chinese-text font-semibold">{error.correction}</span>
+                        </div>
+                      )}
+                      {error.explanation && (
+                        <div className="text-xs text-gray-600 mt-1 italic">{error.explanation}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Right Column */}
           <div className="space-y-6">
             <div className="bg-yellow-100 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-yellow-800 mb-3">🎯 Areas for Improvement</h3>
+              <h3 className="text-xl font-bold text-yellow-800 mb-3">🎯 Areas for Improvement 改进方向</h3>
               <ul className="space-y-2">
                 {learningReport?.areas_for_improvement.map((area, index) => (
-                  <li key={index} className="text-yellow-700">• {area}</li>
+                  <li key={index} className="text-yellow-700 flex items-start">
+                    <span className="mr-2">🎯</span>
+                    {area}
+                  </li>
                 ))}
               </ul>
             </div>
 
-            <div className="bg-purple-100 rounded-2xl p-6">
-              <h3 className="text-xl font-bold text-purple-800 mb-3">📈 Session Stats</h3>
-              <div className="space-y-3 text-purple-700">
-                <div>📚 Vocabulary learned: {learningReport?.vocabulary_learned} words</div>
-                <div>💬 Dialogue turns: {learningReport?.dialogue_turns}</div>
+            {/* Progress Visualization */}
+            {learningReport?.progress_visualization && (
+              <div className="bg-purple-100 rounded-2xl p-6">
+                <h3 className="text-xl font-bold text-purple-800 mb-3">📊 Progress Visualization 进度可视化</h3>
+                <div className="space-y-4">
+                  {Object.entries(learningReport.progress_visualization).map(([skill, score]) => (
+                    <div key={skill} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-purple-700 capitalize">
+                          {skill.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-sm font-bold text-purple-800">{score}%</span>
+                      </div>
+                      <div className="w-full bg-purple-200 rounded-full h-3">
+                        <div 
+                          className="h-3 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all duration-1000"
+                          style={{ width: `${score}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-indigo-100 rounded-2xl p-6">
+              <h3 className="text-xl font-bold text-indigo-800 mb-3">📈 Session Stats 学习统计</h3>
+              <div className="space-y-3 text-indigo-700">
                 <div className="flex items-center">
-                  <span className="mr-2">🏆 Overall score:</span>
-                  <div className="bg-purple-600 text-white rounded-full px-4 py-1 font-bold">
-                    {learningReport?.overall_score}/100
+                  <span className="mr-3 text-2xl">📚</span>
+                  <div>
+                    <div className="font-semibold">Vocabulary learned: {learningReport?.vocabulary_learned} words</div>
+                    <div className="text-sm text-indigo-600">New words mastered in this session</div>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-3 text-2xl">💬</span>
+                  <div>
+                    <div className="font-semibold">Dialogue turns: {learningReport?.dialogue_turns}</div>
+                    <div className="text-sm text-indigo-600">Active conversation participation</div>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-3 text-2xl">🏆</span>
+                  <div className="flex items-center">
+                    <span className="mr-2 font-semibold">Overall score:</span>
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full px-4 py-2 font-bold text-lg">
+                      {learningReport?.overall_score}/100
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Pronunciation & Grammar Insights */}
+            {(learningReport?.pronunciation_feedback?.length > 0 || learningReport?.grammar_insights?.length > 0) && (
+              <div className="bg-teal-100 rounded-2xl p-6">
+                <h3 className="text-xl font-bold text-teal-800 mb-3">🎤 Learning Insights 学习洞察</h3>
+                
+                {learningReport?.pronunciation_feedback?.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-semibold text-teal-700 mb-2">🔊 Pronunciation Tips:</h4>
+                    <ul className="text-sm text-teal-600 space-y-1">
+                      {learningReport.pronunciation_feedback.map((tip, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="mr-2">🎵</span>
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {learningReport?.grammar_insights?.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-teal-700 mb-2">📝 Grammar Insights:</h4>
+                    <ul className="text-sm text-teal-600 space-y-1">
+                      {learningReport.grammar_insights.map((insight, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="mr-2">📖</span>
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
