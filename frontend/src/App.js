@@ -147,8 +147,28 @@ function App() {
   };
 
   const handleLanguageSelection = (language) => {
-    setSelectedLanguage(language);
+    saveLanguagePreference(language);
     setCurrentStep('topic-input');
+  };
+
+  const startNewTopic = () => {
+    setTopic('');
+    setSessionData(null);
+    setDialogueMessages([]);
+    setCurrentMessage('');
+    setLearningReport(null);
+    setDialogueTranslations([]);
+    setShowTranslations(false);
+    setError('');
+    setCurrentStep('topic-input');
+    
+    // Stop any ongoing speech
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
   };
 
   const handleTopicSubmit = async () => {
