@@ -390,35 +390,61 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
         vocabulary_count = len(session.get("vocabulary", []))
         dialogue_turns = len([msg for msg in dialogue_history if msg["is_user"]])
         
-        # Generate learning report using GPT
+        # Collect errors from dialogue history
+        all_errors = []
+        for msg in dialogue_history:
+            if not msg.get("is_user", True) and "errors_detected" in msg:
+                all_errors.extend(msg.get("errors_detected", []))
+        
+        # Generate comprehensive learning report using GPT
         report_prompt = f"""
-        Analyze this Chinese learning session and create a comprehensive learning report.
+        Analyze this Chinese learning session and create a comprehensive, motivational learning report.
         
         Session Details:
         - Topic: {session['topic']}
         - Vocabulary words learned: {vocabulary_count}
         - Dialogue turns: {dialogue_turns}
         - Native language: {session['native_language']}
+        - Errors detected: {all_errors}
         
         Dialogue History (last 10 messages):
         {json.dumps(dialogue_history[-10:], indent=2, default=str)}
         
-        Create a detailed learning report in JSON format:
+        Create a detailed, motivational learning report in JSON format:
         {{
             "strengths": ["strength1", "strength2", "strength3"],
             "areas_for_improvement": ["area1", "area2", "area3"],
             "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
-            "overall_score": 85
+            "overall_score": 85,
+            "errors_analysis": [
+                {{
+                    "error_type": "Grammar",
+                    "description": "Specific error description",
+                    "example": "错误的表达",
+                    "correction": "正确的表达",
+                    "explanation": "Why this is important"
+                }}
+            ],
+            "pronunciation_feedback": ["feedback1", "feedback2"],
+            "grammar_insights": ["insight1", "insight2"],
+            "progress_visualization": {{
+                "vocabulary_mastery": 80,
+                "conversation_fluency": 75,
+                "grammar_accuracy": 70,
+                "pronunciation_clarity": 85,
+                "confidence_level": 90
+            }}
         }}
         
         Focus on:
-        - Vocabulary usage and retention
-        - Conversation flow and engagement
-        - Grammar and sentence structure
-        - Areas that need more practice
-        - Encouraging feedback
+        - Encouraging and motivational tone
+        - Specific error analysis with examples and corrections
+        - Visual progress indicators (percentages for different skills)
+        - Actionable suggestions for improvement
+        - Celebrating achievements and progress
         
-        Score should be 1-100 based on engagement, vocabulary usage, and conversation quality.
+        Score should be 1-100 based on engagement, vocabulary usage, conversation quality, and improvement shown.
+        Make the report inspiring and educational!
         """
         
         response = openai_client.chat.completions.create(
