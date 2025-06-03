@@ -398,10 +398,28 @@ function App() {
 
   const renderTopicInput = () => (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full relative">
+        {/* Settings Button */}
+        <button
+          onClick={openSettings}
+          className="absolute top-6 right-6 p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+          title="设置 Settings"
+        >
+          ⚙️
+        </button>
+
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Choose Your Conversation Topic</h2>
-          <p className="text-gray-600">Native Language: <span className="font-semibold text-blue-600">{selectedLanguage}</span></p>
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">
+            {isFirstTime ? 'Welcome to Chinese Learning!' : 'Choose Your Next Topic'}
+          </h2>
+          <p className="text-gray-600">
+            Native Language: <span className="font-semibold text-blue-600">{selectedLanguage}</span>
+          </p>
+          {!isFirstTime && (
+            <p className="text-gray-500 text-sm mt-2">
+              🎯 Continue your Chinese learning journey with a new conversation topic
+            </p>
+          )}
         </div>
 
         {error && (
@@ -420,12 +438,6 @@ function App() {
         </div>
 
         <div className="flex gap-4">
-          <button
-            onClick={() => setCurrentStep('language-selection')}
-            className="flex-1 py-3 px-6 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-          >
-            Back
-          </button>
           <button
             onClick={handleTopicSubmit}
             disabled={isLoading || !topic.trim()}
