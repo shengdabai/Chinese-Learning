@@ -125,10 +125,22 @@ function App() {
     }
   };
 
-  const startListening = () => {
+  const startListening = async () => {
     if (recognitionRef.current && !isListening) {
+      // Request microphone permission first
+      const hasPermission = await requestMicrophonePermission();
+      if (!hasPermission) {
+        return;
+      }
+      
       setCurrentMessage('');
-      recognitionRef.current.start();
+      setError('');
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+        setError('无法启动语音识别，请稍后重试。');
+      }
     }
   };
 
