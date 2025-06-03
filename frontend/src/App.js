@@ -32,7 +32,25 @@ function App() {
   useEffect(() => {
     fetchSupportedLanguages();
     initializeSpeechRecognition();
+    checkSavedLanguage();
   }, []);
+
+  const checkSavedLanguage = () => {
+    const savedLanguage = localStorage.getItem('chineseLearningLanguage');
+    if (savedLanguage) {
+      setSelectedLanguage(savedLanguage);
+      setIsFirstTime(false);
+      setCurrentStep('topic-input');
+    } else {
+      setIsFirstTime(true);
+      setCurrentStep('language-selection');
+    }
+  };
+
+  const saveLanguagePreference = (language) => {
+    localStorage.setItem('chineseLearningLanguage', language);
+    setSelectedLanguage(language);
+  };
 
   const initializeSpeechRecognition = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
