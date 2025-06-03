@@ -496,7 +496,11 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
             strengths=report_data["strengths"],
             areas_for_improvement=report_data["areas_for_improvement"],
             suggestions=report_data["suggestions"],
-            overall_score=report_data["overall_score"]
+            overall_score=report_data["overall_score"],
+            errors_analysis=report_data.get("errors_analysis", []),
+            pronunciation_feedback=report_data.get("pronunciation_feedback", []),
+            grammar_insights=report_data.get("grammar_insights", []),
+            progress_visualization=report_data.get("progress_visualization", {})
         )
         
         # Update session status
