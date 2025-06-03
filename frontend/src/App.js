@@ -453,7 +453,16 @@ function App() {
   const renderVocabularyReview = () => (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-2xl p-8">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 relative">
+          {/* Settings Button */}
+          <button
+            onClick={openSettings}
+            className="absolute top-6 right-6 p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+            title="设置 Settings"
+          >
+            ⚙️
+          </button>
+
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Vocabulary for: {topic}</h2>
             <p className="text-gray-600">Study these words before starting the conversation</p>
