@@ -4,7 +4,7 @@ import './App.css';
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
 function App() {
-  const [currentStep, setCurrentStep] = useState('language-selection');
+  const [currentStep, setCurrentStep] = useState('loading'); // Start with loading to check saved language
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [topic, setTopic] = useState('');
   const [sessionData, setSessionData] = useState(null);
@@ -20,6 +20,10 @@ function App() {
   const [speechSupported, setSpeechSupported] = useState(false);
   const [dialogueTranslations, setDialogueTranslations] = useState([]);
   const [showTranslations, setShowTranslations] = useState(false);
+  
+  // Settings state
+  const [showSettings, setShowSettings] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(true);
   
   // Speech refs
   const recognitionRef = useRef(null);
