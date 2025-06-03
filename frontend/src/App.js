@@ -308,8 +308,10 @@ function App() {
       const aiMessage = {
         message: data.response,
         translation: data.translation,
+        pinyin: data.pinyin,
         isUser: false,
-        suggestions: data.suggestions
+        suggestions: data.suggestions,
+        errors_detected: data.errors_detected || []
       };
 
       setDialogueMessages(prev => [...prev, aiMessage]);
