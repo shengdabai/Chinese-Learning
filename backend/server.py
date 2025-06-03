@@ -65,7 +65,9 @@ class DialogueMessage(BaseModel):
 class DialogueResponse(BaseModel):
     response: str
     translation: str
+    pinyin: str
     suggestions: List[str]
+    errors_detected: List[str] = []
 
 class LearningReport(BaseModel):
     session_id: str
