@@ -764,13 +764,140 @@ function App() {
     </div>
   );
 
+  const renderSettings = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">设置 Settings</h3>
+          <button
+            onClick={closeSettings}
+            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+          >
+            ×
+          </button>
+        </div>
+        
+        <div className="mb-6">
+          <h4 className="text-lg font-semibold text-gray-700 mb-4">Mother Language 母语</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+            {supportedLanguages.map((language) => (
+              <button
+                key={language}
+                onClick={() => changeLanguage(language)}
+                className={`p-3 text-left border-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
+                  selectedLanguage === language
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
+                    : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                }`}
+              >
+                {language}
+                {selectedLanguage === language && (
+                  <span className="ml-2 text-blue-500">✓</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t pt-6">
+          <h4 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h4>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                closeSettings();
+                startNewTopic();
+              }}
+              className="w-full py-3 px-4 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+            >
+              🆕 Start New Topic 开始新话题
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem('chineseLearningLanguage');
+                resetApp();
+                closeSettings();
+              }}
+              className="w-full py-3 px-4 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors"
+            >
+              🔄 Reset All Settings 重置所有设置
+            </button>
+          </div>
+        </div>
+        
+        <div className="mt-6 text-center">
+          <button
+            onClick={closeSettings}
+            className="py-3 px-6 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors"
+          >
+            关闭 Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderLoadingScreen = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-lg text-gray-600">Loading Chinese Learning Agent...</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="App">
+      {currentStep === 'loading' && renderLoadingScreen()}
       {currentStep === 'language-selection' && renderLanguageSelection()}
       {currentStep === 'topic-input' && renderTopicInput()}
       {currentStep === 'vocabulary-review' && renderVocabularyReview()}
       {currentStep === 'dialogue-practice' && renderDialoguePractice()}
       {currentStep === 'learning-report' && renderLearningReport()}
+      
+      {/* Settings Modal */}
+      {showSettings && renderSettings()}
+      
+      {/* Dialogue Translations Modal */}
+      {showTranslations && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-800">对话翻译 Dialogue Translation</h3>
+              <button
+                onClick={() => setShowTranslations(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {dialogueTranslations.map((translation, index) => (
+                <div key={index} className={`p-4 rounded-xl ${
+                  translation.is_user 
+                    ? 'bg-blue-100 border-l-4 border-blue-500' 
+                    : 'bg-green-100 border-l-4 border-green-500'
+                }`}>
+                  <div className="font-semibold mb-2 text-gray-700">
+                    {translation.is_user ? '学生 Student' : '老师 Teacher'}
+                  </div>
+                  <div className="text-lg mb-2 chinese-text">{translation.original}</div>
+                  <div className="text-gray-600">{translation.translation}</div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowTranslations(false)}
+                className="py-3 px-6 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-colors"
+              >
+                关闭 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
