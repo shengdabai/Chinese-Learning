@@ -607,27 +607,28 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
         )
         
         # Update session status
-        await sessions_collection.update_one(
-            {"session_id": session_id},
-            {
-                "$set": {
-                    "status": "completed",
-                    "learning_report": learning_report.dict(),
-                    "completed_at": datetime.now()
-                }
-            }
-        )
+        update_data = {
+            "status": "completed",
+            "learning_report": learning_report.dict(),
+            "completed_at": datetime.now()
+        }
+        await update_session_data(session_id, update_data)
         
-        # Store in progress collection for user tracking
-        await progress_collection.insert_one({
-            "session_id": session_id,
-            "topic": session["topic"],
-            "native_language": session["native_language"],
-            "score": learning_report.overall_score,
-            "vocabulary_count": vocabulary_count,
-            "dialogue_turns": dialogue_turns,
-            "created_at": datetime.now()
-        })
+        # Store in progress collection for user tracking (if database available)
+        if DATABASE_AVAILABLE:
+            try:
+                await progress_collection.insert_one({
+                    "session_id": session_id,
+                    "topic": session["topic"],
+                    "native_language": session["native_language"],
+                    "score": learning_report.overall_score,
+                    "vocabulary_count": vocabulary_count,
+                    "dialogue_turns": dialogue_turns,
+                    "created_at": datetime.now()
+                })
+            except Exception as e:
+                print(f"❌ Could not save to progress collection: {str(e)}")
+                # Continue without failing - this is not critical
         
         return learning_report
         
