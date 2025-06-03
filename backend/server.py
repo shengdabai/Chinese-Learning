@@ -78,6 +78,10 @@ class LearningReport(BaseModel):
     areas_for_improvement: List[str]
     suggestions: List[str]
     overall_score: int
+    errors_analysis: List[Dict[str, Any]] = []
+    pronunciation_feedback: List[str] = []
+    grammar_insights: List[str] = []
+    progress_visualization: Dict[str, Any] = {}
 
 # Supported languages
 SUPPORTED_LANGUAGES = [
