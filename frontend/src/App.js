@@ -1084,48 +1084,6 @@ function App() {
       
       {/* Settings Modal */}
       {showSettings && renderSettings()}
-      
-      {/* Dialogue Translations Modal */}
-      {showTranslations && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-800">对话翻译 Dialogue Translation</h3>
-              <button
-                onClick={() => setShowTranslations(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {dialogueTranslations.map((translation, index) => (
-                <div key={index} className={`p-4 rounded-xl ${
-                  translation.is_user 
-                    ? 'bg-blue-100 border-l-4 border-blue-500' 
-                    : 'bg-green-100 border-l-4 border-green-500'
-                }`}>
-                  <div className="font-semibold mb-2 text-gray-700">
-                    {translation.is_user ? '学生 Student' : '老师 Teacher'}
-                  </div>
-                  <div className="text-lg mb-2 chinese-text">{translation.original}</div>
-                  <div className="text-gray-600">{translation.translation}</div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => setShowTranslations(false)}
-                className="py-3 px-6 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-colors"
-              >
-                关闭 Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
