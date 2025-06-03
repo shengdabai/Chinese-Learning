@@ -638,12 +638,13 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
 @app.get("/api/session/{session_id}")
 async def get_session(session_id: str):
     try:
-        session = await sessions_collection.find_one({"session_id": session_id})
+        session = await get_session_data(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Convert ObjectId to string for JSON serialization
-        session["_id"] = str(session["_id"])
+        # Convert ObjectId to string for JSON serialization if it exists
+        if "_id" in session:
+            session["_id"] = str(session["_id"])
         return session
         
     except Exception as e:
