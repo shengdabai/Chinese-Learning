@@ -747,8 +747,8 @@ function App() {
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && !isLoading && sendMessage()}
-                placeholder="Type your message in Chinese or English..."
-                className="flex-1 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-lg"
+                placeholder="用中文输入或点击麦克风说话..."
+                className="flex-1 p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-lg chinese-text"
                 disabled={isLoading}
               />
               {speechSupported && (
@@ -760,7 +760,7 @@ function App() {
                       : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                   disabled={isLoading}
-                  title={isListening ? "停止录音" : "开始语音输入"}
+                  title={isListening ? "停止录音" : "中文语音输入"}
                 >
                   {isListening ? '🛑' : '🎤'}
                 </button>
@@ -770,12 +770,12 @@ function App() {
                 disabled={isLoading || !currentMessage.trim()}
                 className="py-4 px-6 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Send
+                发送
               </button>
             </div>
             {isListening && (
               <div className="mt-2 text-center text-sm text-gray-600">
-                🎤 正在录音... 请说中文
+                🎤 正在录音，请用中文说话...
               </div>
             )}
           </div>
