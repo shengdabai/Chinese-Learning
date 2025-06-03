@@ -677,17 +677,10 @@ function App() {
                   </div>
                 )}
                 <button
-                  onClick={getDialogueTranslations}
-                  className="py-2 px-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                  disabled={isLoading}
-                >
-                  获取翻译
-                </button>
-                <button
                   onClick={endSession}
                   className="py-2 px-4 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
                 >
-                  End Session
+                  结束对话
                 </button>
               </div>
             </div>
