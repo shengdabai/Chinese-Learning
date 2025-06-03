@@ -608,15 +608,38 @@ function App() {
             {dialogueMessages.map((msg, index) => (
               <div key={index} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-3xl ${msg.isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'} rounded-2xl p-4`}>
-                  <div className="font-medium mb-2">{msg.message}</div>
-                  {msg.translation && (
-                    <div className={`text-sm ${msg.isUser ? 'text-blue-100' : 'text-gray-600'} mb-2`}>
-                      Translation: {msg.translation}
+                  <div className="font-medium mb-2 chinese-text text-lg">{msg.message}</div>
+                  
+                  {/* Pinyin for AI responses */}
+                  {!msg.isUser && msg.pinyin && (
+                    <div className="text-sm text-gray-600 mb-2 pinyin-text italic">
+                      📝 {msg.pinyin}
                     </div>
                   )}
+                  
+                  {/* Translation */}
+                  {msg.translation && (
+                    <div className={`text-sm ${msg.isUser ? 'text-blue-100' : 'text-gray-600'} mb-2 p-2 rounded ${msg.isUser ? 'bg-blue-700' : 'bg-gray-200'}`}>
+                      💬 {msg.translation}
+                    </div>
+                  )}
+                  
+                  {/* Error detection for user messages */}
+                  {msg.isUser && msg.errors_detected && msg.errors_detected.length > 0 && (
+                    <div className="mt-2 p-2 bg-yellow-100 text-yellow-800 rounded text-sm">
+                      💡 <strong>Learning Tips:</strong>
+                      <ul className="mt-1 ml-4 list-disc">
+                        {msg.errors_detected.map((error, idx) => (
+                          <li key={idx}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Suggestions */}
                   {msg.suggestions && msg.suggestions.length > 0 && (
                     <div className="mt-3">
-                      <div className="text-sm font-semibold mb-2">Suggestions:</div>
+                      <div className="text-sm font-semibold mb-2">💡 Suggestions:</div>
                       <div className="space-y-1">
                         {msg.suggestions.map((suggestion, idx) => (
                           <div key={idx} className={`text-sm ${msg.isUser ? 'text-blue-100' : 'text-gray-600'}`}>
@@ -626,6 +649,17 @@ function App() {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Audio button for AI responses */}
+                  {!msg.isUser && (
+                    <button
+                      onClick={() => speakText(msg.message)}
+                      className="mt-2 p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors text-sm"
+                      title="播放发音 Play pronunciation"
+                    >
+                      🔊
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -634,7 +668,7 @@ function App() {
                 <div className="bg-gray-100 text-gray-800 rounded-2xl p-4">
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                    <span>Teacher is typing...</span>
+                    <span>老师正在思考... Teacher is thinking...</span>
                   </div>
                 </div>
               </div>
