@@ -507,6 +507,11 @@ function App() {
             placeholder="Enter a conversation topic (e.g., 'ordering food at a restaurant', 'introducing yourself', 'talking about hobbies')"
             className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none resize-none h-32 text-lg"
           />
+          {isLoading && (
+            <div className="mt-2 text-center text-sm text-blue-600">
+              ⏳ Generating vocabulary... This may take 10-20 seconds
+            </div>
+          )}
         </div>
 
         <div className="flex gap-4">
