@@ -517,7 +517,16 @@ function App() {
   const renderDialoguePractice = () => (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-2xl h-[80vh] flex flex-col">
+        <div className="bg-white rounded-3xl shadow-2xl h-[80vh] flex flex-col relative">
+          {/* Settings Button */}
+          <button
+            onClick={openSettings}
+            className="absolute top-4 right-4 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors z-10"
+            title="设置 Settings"
+          >
+            ⚙️
+          </button>
+
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-800">Conversation Practice: {topic}</h2>
             <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
