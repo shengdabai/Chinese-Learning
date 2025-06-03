@@ -75,8 +75,18 @@ function App() {
       };
       
       recognitionRef.current.onerror = (event) => {
-        setError(`Speech recognition error: ${event.error}`);
+        console.error('Speech recognition error:', event.error);
         setIsListening(false);
+        
+        if (event.error === 'not-allowed') {
+          setError('麦克风权限被拒绝。请在浏览器设置中允许麦克风访问，然后刷新页面。');
+        } else if (event.error === 'no-speech') {
+          setError('没有检测到语音输入，请重试。');
+        } else if (event.error === 'network') {
+          setError('网络错误，请检查网络连接。');
+        } else {
+          setError(`语音识别错误: ${event.error}。请尝试使用文字输入。`);
+        }
       };
       
       recognitionRef.current.onend = () => {
@@ -85,13 +95,33 @@ function App() {
       
       setSpeechSupported(true);
       
-      // Initialize speech synthesis
+      // Initialize speech synthesis with better Chinese voice selection
       if ('speechSynthesis' in window) {
         synthRef.current = window.speechSynthesis;
+        // Load voices asynchronously
+        if (synthRef.current.getVoices().length === 0) {
+          synthRef.current.addEventListener('voiceschanged', () => {
+            console.log('Voices loaded:', synthRef.current.getVoices().length);
+          });
+        }
       }
     } else {
       console.log('Speech recognition not supported');
       setSpeechSupported(false);
+      setError('您的浏览器不支持语音识别功能。建议使用最新版本的Chrome、Edge或Safari浏览器。');
+    }
+  };
+
+  const requestMicrophonePermission = async () => {
+    try {
+      // Request microphone permission explicitly
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      setError(''); // Clear any previous permission errors
+      return true;
+    } catch (err) {
+      console.error('Microphone permission denied:', err);
+      setError('需要麦克风权限才能使用语音输入功能。请点击地址栏的麦克风图标并选择"允许"。');
+      return false;
     }
   };
 
