@@ -36,6 +36,72 @@ progress_collection = db['user_progress']
 # OpenAI client
 openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
+# Database status check
+DATABASE_AVAILABLE = True
+SESSIONS_CACHE = {}  # Fallback in-memory storage
+
+async def check_database_permissions():
+    """Check if we have database write permissions"""
+    global DATABASE_AVAILABLE
+    try:
+        # Try to perform a simple operation
+        test_doc = {"test": "connection", "timestamp": datetime.now()}
+        result = await sessions_collection.insert_one(test_doc)
+        await sessions_collection.delete_one({"_id": result.inserted_id})
+        print(f"✅ Database connection successful to {DB_NAME}")
+        DATABASE_AVAILABLE = True
+    except Exception as e:
+        print(f"❌ Database permission error: {str(e)}")
+        print(f"🔄 Falling back to in-memory storage")
+        DATABASE_AVAILABLE = False
+
+async def save_session_data(session_data):
+    """Save session data with fallback to memory"""
+    if DATABASE_AVAILABLE:
+        try:
+            await sessions_collection.insert_one(session_data)
+            return True
+        except Exception as e:
+            print(f"❌ Database save error: {str(e)}")
+            # Fall back to memory storage
+            SESSIONS_CACHE[session_data["session_id"]] = session_data
+            return False
+    else:
+        # Use memory storage
+        SESSIONS_CACHE[session_data["session_id"]] = session_data
+        return False
+
+async def get_session_data(session_id):
+    """Get session data with fallback to memory"""
+    if DATABASE_AVAILABLE:
+        try:
+            return await sessions_collection.find_one({"session_id": session_id})
+        except Exception as e:
+            print(f"❌ Database read error: {str(e)}")
+            return SESSIONS_CACHE.get(session_id)
+    else:
+        return SESSIONS_CACHE.get(session_id)
+
+async def update_session_data(session_id, update_data):
+    """Update session data with fallback to memory"""
+    if DATABASE_AVAILABLE:
+        try:
+            await sessions_collection.update_one(
+                {"session_id": session_id},
+                {"$set": update_data}
+            )
+            return True
+        except Exception as e:
+            print(f"❌ Database update error: {str(e)}")
+            # Fall back to memory storage
+            if session_id in SESSIONS_CACHE:
+                SESSIONS_CACHE[session_id].update(update_data)
+            return False
+    else:
+        if session_id in SESSIONS_CACHE:
+            SESSIONS_CACHE[session_id].update(update_data)
+        return False
+
 # Pydantic models
 class LanguageSelection(BaseModel):
     native_language: str
