@@ -295,7 +295,7 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
 async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
     try:
         # Get session data
-        session = await sessions_collection.find_one({"session_id": message.session_id})
+        session = await get_session_data(message.session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
