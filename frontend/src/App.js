@@ -687,7 +687,16 @@ function App() {
 
   const renderLearningReport = () => (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-4xl w-full">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-4xl w-full relative">
+        {/* Settings Button */}
+        <button
+          onClick={openSettings}
+          className="absolute top-6 right-6 p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+          title="设置 Settings"
+        >
+          ⚙️
+        </button>
+
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Learning Report 📊</h2>
           <p className="text-gray-600">Session completed for topic: <span className="font-semibold">{topic}</span></p>
@@ -740,13 +749,16 @@ function App() {
           </div>
         </div>
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 space-y-4">
           <button
-            onClick={resetApp}
-            className="py-4 px-8 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-semibold text-lg hover:from-amber-700 hover:to-orange-700 transition-all transform hover:scale-105"
+            onClick={startNewTopic}
+            className="py-4 px-8 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-semibold text-lg hover:from-amber-700 hover:to-orange-700 transition-all transform hover:scale-105 mr-4"
           >
-            Start New Learning Session 🚀
+            Continue Learning 继续练习 🚀
           </button>
+          <div className="text-sm text-gray-500">
+            Choose a new topic to continue your Chinese learning journey
+          </div>
         </div>
       </div>
     </div>
