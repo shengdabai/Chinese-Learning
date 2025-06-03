@@ -143,7 +143,7 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         """
         
         response = openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"You are a Chinese language teacher helping students learn vocabulary. Always respond with valid JSON. Translate to {topic_input.native_language}."},
                 {"role": "user", "content": prompt}
@@ -239,7 +239,7 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         messages.append({"role": "user", "content": message.message})
         
         response = openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.8
         )
@@ -343,7 +343,7 @@ async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
         """
         
         response = openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"You are a professional translator specializing in Chinese to {session['native_language']} translation. Respond only with valid JSON."},
                 {"role": "user", "content": translation_prompt}
@@ -448,7 +448,7 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
         """
         
         response = openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"You are an expert Chinese language teacher creating learning reports. Respond only with valid JSON. Be encouraging but constructive. Use {session['native_language']} for explanations."},
                 {"role": "user", "content": report_prompt}
