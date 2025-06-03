@@ -212,14 +212,19 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         3. Keep responses at beginner-intermediate level
         4. Be encouraging and provide gentle corrections
         5. Ask follow-up questions to continue the conversation
-        6. If the student makes mistakes, provide gentle corrections
+        6. If the student makes mistakes, provide gentle corrections and note them
+        7. Analyze the student's input for common errors (grammar, vocabulary usage, sentence structure)
         
         Format your response as JSON:
         {{
             "response": "Your Chinese response with some {session['native_language']} if needed",
             "translation": "Full translation to {session['native_language']}",
-            "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
+            "pinyin": "Pinyin for the Chinese response with tone marks",
+            "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+            "errors_detected": ["error1 if any", "error2 if any"]
         }}
+        
+        Make sure to include accurate pinyin with tone marks for the Chinese response.
         """
         
         # Build message history for context
