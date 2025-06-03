@@ -115,15 +115,63 @@ function App() {
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
-      utterance.rate = 0.8;
-      utterance.pitch = 1;
+      utterance.rate = 0.8; // Slightly slower for learning
+      utterance.pitch = 1.0;
+      utterance.volume = 0.9;
       
-      // Try to find a Chinese voice
+      // Enhanced Chinese voice selection with priority order
       const voices = synthRef.current.getVoices();
-      const chineseVoice = voices.find(voice => voice.lang.includes('zh'));
-      if (chineseVoice) {
-        utterance.voice = chineseVoice;
+      let selectedVoice = null;
+      
+      // Priority order for Chinese voices (best quality first)
+      const preferredVoices = [
+        // Mandarin Chinese voices (mainland)
+        'Microsoft Yaoyao - Chinese (Simplified, PRC)',
+        'Microsoft Kangkang - Chinese (Simplified, PRC)', 
+        'Microsoft Huihui - Chinese (Simplified, PRC)',
+        'Google 普通话（中国大陆）',
+        'Chinese (China)',
+        'zh-CN',
+        // Fallback to any Chinese voice
+        'Chinese',
+        'Mandarin'
+      ];
+      
+      // Find the best available Chinese voice
+      for (const preferredName of preferredVoices) {
+        selectedVoice = voices.find(voice => 
+          voice.name.includes(preferredName) || 
+          voice.lang.includes('zh-CN') ||
+          voice.lang.includes('zh')
+        );
+        if (selectedVoice) break;
       }
+      
+      // Additional filtering for quality voices
+      if (!selectedVoice) {
+        selectedVoice = voices.find(voice => 
+          voice.lang.startsWith('zh') && 
+          (voice.name.includes('Microsoft') || voice.name.includes('Google'))
+        );
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log('Using voice:', selectedVoice.name, selectedVoice.lang);
+      }
+      
+      // Add speech event handlers for better user feedback
+      utterance.onstart = () => {
+        console.log('Speech started');
+      };
+      
+      utterance.onend = () => {
+        console.log('Speech ended');
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Speech error:', event.error);
+      };
       
       synthRef.current.speak(utterance);
     }
