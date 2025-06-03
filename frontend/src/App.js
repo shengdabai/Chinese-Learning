@@ -234,6 +234,12 @@ function App() {
     setError('');
 
     try {
+      console.log('Calling API with topic:', topic, 'language:', selectedLanguage);
+      console.log('API URL:', `${API_BASE_URL}/api/generate-vocabulary`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
       const response = await fetch(`${API_BASE_URL}/api/generate-vocabulary`, {
         method: 'POST',
         headers: {
@@ -243,18 +249,34 @@ function App() {
           topic: topic,
           native_language: selectedLanguage
         }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to generate vocabulary');
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('API Response data:', data);
       setSessionData(data);
       setCurrentStep('vocabulary-review');
     } catch (error) {
       console.error('Error generating vocabulary:', error);
-      setError('Failed to generate vocabulary. Please try again.');
+      
+      if (error.name === 'AbortError') {
+        setError('Request timed out. Please check your internet connection and try again.');
+      } else if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(`Failed to generate vocabulary: ${error.message}. Please try again.`);
+      }
     } finally {
       setIsLoading(false);
     }
