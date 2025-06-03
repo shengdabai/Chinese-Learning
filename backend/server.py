@@ -388,16 +388,12 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         ])
         
         # Update session in database
-        await sessions_collection.update_one(
-            {"session_id": message.session_id},
-            {
-                "$set": {
-                    "dialogue_history": dialogue_history,
-                    "status": "dialogue_active",
-                    "last_updated": datetime.now()
-                }
-            }
-        )
+        update_data = {
+            "dialogue_history": dialogue_history,
+            "status": "dialogue_active",
+            "last_updated": datetime.now()
+        }
+        await update_session_data(message.session_id, update_data)
         
         return DialogueResponse(
             response=ai_response["response"],
