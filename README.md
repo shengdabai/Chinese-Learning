@@ -42,7 +42,7 @@ A full-stack web app with a single, focused learning flow:
 | -------- | ----------------------------------------------------------------- |
 | Frontend | React 19, Tailwind CSS 3, Web Speech API (recognition + synthesis) |
 | Backend  | FastAPI, Uvicorn, Pydantic                                        |
-| AI       | OpenAI Chat Completions (`gpt-3.5-turbo`)                          |
+| AI       | OpenAI Chat Completions (`gpt-3.5-turbo` by default, configurable via `OPENAI_MODEL`) |
 | Data     | MongoDB (via Motor async driver), with in-memory fallback         |
 | Pinyin   | `pinyin` Python package                                           |
 | Deploy   | Docker (multi-stage) + nginx reverse proxy                        |
@@ -62,10 +62,13 @@ A full-stack web app with a single, focused learning flow:
 cd backend
 pip install -r requirements.txt
 
-# Provide configuration via environment variables:
-#   OPENAI_API_KEY   (required)
+# Provide configuration via environment variables (see .env.example):
+#   OPENAI_API_KEY   (required — server fails fast on startup if unset)
+#   OPENAI_MODEL     (optional, defaults to gpt-3.5-turbo)
 #   MONGO_URL        (optional, defaults to mongodb://localhost:27017)
 #   DB_NAME          (optional, defaults to test_database)
+#   ALLOWED_ORIGINS  (optional, comma-separated CORS origins;
+#                     set to your frontend domain(s) in production)
 export OPENAI_API_KEY=YOUR_KEY_HERE
 
 uvicorn server:app --host 0.0.0.0 --port 8001
@@ -182,7 +185,7 @@ No license yet — all rights reserved. If you'd like to reuse this code, please
 | ------ | -------------------------------------------------------- |
 | 前端   | React 19、Tailwind CSS 3、Web Speech API（识别 + 合成)     |
 | 后端   | FastAPI、Uvicorn、Pydantic                               |
-| AI     | OpenAI Chat Completions（`gpt-3.5-turbo`)                |
+| AI     | OpenAI Chat Completions（默认 `gpt-3.5-turbo`，可通过 `OPENAI_MODEL` 配置) |
 | 数据   | MongoDB（通过 Motor 异步驱动），并带内存回退               |
 | 拼音   | `pinyin` Python 包                                       |
 | 部署   | Docker（多阶段构建)+ nginx 反向代理                       |
@@ -202,10 +205,13 @@ No license yet — all rights reserved. If you'd like to reuse this code, please
 cd backend
 pip install -r requirements.txt
 
-# 通过环境变量提供配置：
-#   OPENAI_API_KEY   （必填）
+# 通过环境变量提供配置（参见 .env.example）：
+#   OPENAI_API_KEY   （必填——未设置时服务启动会立即报错退出）
+#   OPENAI_MODEL     （可选，默认 gpt-3.5-turbo）
 #   MONGO_URL        （可选，默认 mongodb://localhost:27017）
 #   DB_NAME          （可选，默认 test_database）
+#   ALLOWED_ORIGINS  （可选，逗号分隔的 CORS 来源；
+#                     生产环境请设为你的前端域名）
 export OPENAI_API_KEY=YOUR_KEY_HERE
 
 uvicorn server:app --host 0.0.0.0 --port 8001

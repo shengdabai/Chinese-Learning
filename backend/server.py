@@ -17,9 +17,21 @@ load_dotenv()
 app = FastAPI()
 
 # CORS middleware
+# Origins are configured via the ALLOWED_ORIGINS environment variable
+# (comma-separated). Defaults to common local dev origins so the app works
+# out of the box, but production deployments MUST set ALLOWED_ORIGINS to the
+# real frontend domain(s) instead of relying on a wildcard.
+_allowed_origins_env = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:8001,http://127.0.0.1:3000",
+)
+ALLOWED_ORIGINS = [
+    origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,6 +47,10 @@ progress_collection = db['user_progress']
 
 # OpenAI client
 openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+# Model name is configurable via OPENAI_MODEL so the deployment is not locked
+# to a single model (gpt-3.5-turbo is on a deprecation path in some accounts).
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo')
 
 # Database status check
 DATABASE_AVAILABLE = True
@@ -167,7 +183,14 @@ def convert_to_pinyin(chinese_text: str) -> str:
 
 @app.on_event("startup")
 async def startup_event():
-    """Check database permissions on startup"""
+    """Validate required configuration and check database permissions on startup"""
+    if not os.environ.get('OPENAI_API_KEY'):
+        # Fail fast with a clear message instead of surfacing a cryptic error
+        # only on the first AI call.
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set. Set it in the environment (or a .env "
+            "file) before starting the server."
+        )
     await check_database_permissions()
 
 @app.get("/api/health")
@@ -225,7 +248,7 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         start_time = datetime.now()
         
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": f"You are a Chinese language teacher helping students learn vocabulary. Always respond with valid JSON. Translate to {topic_input.native_language}."},
                 {"role": "user", "content": prompt}
@@ -346,7 +369,7 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         messages.append({"role": "user", "content": message.message})
         
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=OPENAI_MODEL,
             messages=messages,
             temperature=0.8
         )
@@ -446,7 +469,7 @@ async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
         """
         
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": f"You are a professional translator specializing in Chinese to {session['native_language']} translation. Respond only with valid JSON."},
                 {"role": "user", "content": translation_prompt}
@@ -551,7 +574,7 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
         """
         
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": f"You are an expert Chinese language teacher creating learning reports. Respond only with valid JSON. Be encouraging but constructive. Use {session['native_language']} for explanations."},
                 {"role": "user", "content": report_prompt}

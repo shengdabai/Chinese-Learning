@@ -74,3 +74,23 @@ android-sdk/
 !.env.example
 backend/.env
 frontend/.env
+*.key
+*.pem
+
+# internal / platform metadata (do not commit)
+.gitconfig
+test_result.md
+backend_test.py
+
+# Emergent platform Dockerfile scaffolding variants (not used by this project)
+.devcontainer/DockerfilePythonDefault
+.devcontainer/DockerfileJdk17Default
+.devcontainer/DockerfileAppBuilderCloud
+
+# AI agent / orchestration state (do not commit)
+.omc/
+**/.omc/
+*-todo.md
+state*.json
+*.state.json
+*.log
