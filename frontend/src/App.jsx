@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import { resolveApiBaseUrl } from './api-base-url.mjs';
+import { checkMicrophonePermission } from './microphone.mjs';
 
-const API_BASE_URL = import.meta.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const API_BASE_URL = resolveApiBaseUrl(import.meta.env.REACT_APP_BACKEND_URL, import.meta.env.DEV);
 
 function App() {
   const [currentStep, setCurrentStep] = useState('loading'); // Start with loading to check saved language
@@ -115,7 +117,7 @@ function App() {
   const requestMicrophonePermission = async () => {
     try {
       // Request microphone permission explicitly
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      await checkMicrophonePermission(navigator.mediaDevices);
       setError(''); // Clear any previous permission errors
       return true;
     } catch (err) {
