@@ -7,7 +7,6 @@ COPY frontend/ /app/
 RUN rm /app/.env
 RUN touch /app/.env
 RUN echo "${FRONTEND_ENV}" | tr ',' '\n' > /app/.env
-RUN cat /app/.env
 RUN yarn install --frozen-lockfile && yarn build
 
 # Stage 2: Install Python Backend

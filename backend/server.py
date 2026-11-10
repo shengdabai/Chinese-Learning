@@ -1,20 +1,36 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, StringConstraints, UUID4, field_validator
+from typing import List, Optional, Dict, Any, Annotated
+from contextlib import asynccontextmanager
+from copy import deepcopy
 import os
 from dotenv import load_dotenv
 import uuid
 import json
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
-from openai import OpenAI
+from openai import AsyncOpenAI
 import pinyin
 
 # Load environment variables
 load_dotenv()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app):
+    global openai_client
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY is not set. Set it before starting the server.")
+    openai_client = AsyncOpenAI(timeout=30, max_retries=1)
+    try:
+        await check_database_permissions()
+        yield
+    finally:
+        await openai_client.close()
+        client.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS middleware
 # Origins are configured via the ALLOWED_ORIGINS environment variable
@@ -46,7 +62,7 @@ sessions_collection = db['learning_sessions']
 progress_collection = db['user_progress']
 
 # OpenAI client
-openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+openai_client = None  # Created and closed by the application lifespan.
 
 # Model name is configurable via OPENAI_MODEL so the deployment is not locked
 # to a single model (gpt-3.5-turbo is on a deprecation path in some accounts).
@@ -67,7 +83,7 @@ async def check_database_permissions():
         print(f"✅ Database connection successful to {DB_NAME}")
         DATABASE_AVAILABLE = True
     except Exception as e:
-        print(f"❌ Database permission error: {str(e)}")
+        print(f"❌ Database permission error: {type(e).__name__}")
         print(f"🔄 Falling back to in-memory storage")
         DATABASE_AVAILABLE = False
 
@@ -75,31 +91,36 @@ async def save_session_data(session_data):
     """Save session data with fallback to memory"""
     if DATABASE_AVAILABLE:
         try:
-            await sessions_collection.insert_one(session_data)
+            await sessions_collection.insert_one(deepcopy(session_data))
             return True
         except Exception as e:
-            print(f"❌ Database save error: {str(e)}")
+            print(f"❌ Database save error: {type(e).__name__}")
             # Fall back to memory storage
-            SESSIONS_CACHE[session_data["session_id"]] = session_data
+            SESSIONS_CACHE[session_data["session_id"]] = deepcopy(session_data)
             return False
     else:
         # Use memory storage
-        SESSIONS_CACHE[session_data["session_id"]] = session_data
+        SESSIONS_CACHE[session_data["session_id"]] = deepcopy(session_data)
         return False
 
 async def get_session_data(session_id):
     """Get session data with fallback to memory"""
+    if session_id in SESSIONS_CACHE:
+        return deepcopy(SESSIONS_CACHE[session_id])
     if DATABASE_AVAILABLE:
         try:
             return await sessions_collection.find_one({"session_id": session_id})
         except Exception as e:
-            print(f"❌ Database read error: {str(e)}")
-            return SESSIONS_CACHE.get(session_id)
+            print(f"❌ Database read error: {type(e).__name__}")
+            return deepcopy(SESSIONS_CACHE.get(session_id))
     else:
-        return SESSIONS_CACHE.get(session_id)
+        return deepcopy(SESSIONS_CACHE.get(session_id))
 
-async def update_session_data(session_id, update_data):
+async def update_session_data(session_id, update_data, session_data=None):
     """Update session data with fallback to memory"""
+    if session_id in SESSIONS_CACHE:
+        SESSIONS_CACHE[session_id].update(deepcopy(update_data))
+        return False
     if DATABASE_AVAILABLE:
         try:
             await sessions_collection.update_one(
@@ -108,23 +129,31 @@ async def update_session_data(session_id, update_data):
             )
             return True
         except Exception as e:
-            print(f"❌ Database update error: {str(e)}")
-            # Fall back to memory storage
-            if session_id in SESSIONS_CACHE:
-                SESSIONS_CACHE[session_id].update(update_data)
+            print(f"❌ Database update error: {type(e).__name__}")
+            # Preserve the loaded session if the database fails after a read.
+            if session_data is not None:
+                cached = deepcopy(session_data)
+                cached.update(deepcopy(update_data))
+                SESSIONS_CACHE[session_id] = cached
             return False
     else:
         if session_id in SESSIONS_CACHE:
-            SESSIONS_CACHE[session_id].update(update_data)
+            SESSIONS_CACHE[session_id].update(deepcopy(update_data))
         return False
 
 # Pydantic models
 class LanguageSelection(BaseModel):
     native_language: str
 
-class TopicInput(BaseModel):
-    topic: str
-    native_language: str
+    @field_validator("native_language")
+    @classmethod
+    def supported_language(cls, value):
+        if value not in SUPPORTED_LANGUAGES:
+            raise ValueError("Unsupported native language")
+        return value
+
+class TopicInput(LanguageSelection):
+    topic: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
 
 class VocabularyItem(BaseModel):
     chinese: str
@@ -141,8 +170,8 @@ class VocabularyResponse(BaseModel):
     vocabulary: List[VocabularyItem]
 
 class DialogueMessage(BaseModel):
-    session_id: str
-    message: str
+    session_id: UUID4
+    message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
     is_user: bool
 
 class DialogueResponse(BaseModel):
@@ -180,18 +209,6 @@ def convert_to_pinyin(chinese_text: str) -> str:
         return pinyin.get(chinese_text, format="strip", delimiter=" ")
     except:
         return chinese_text
-
-@app.on_event("startup")
-async def startup_event():
-    """Validate required configuration and check database permissions on startup"""
-    if not os.environ.get('OPENAI_API_KEY'):
-        # Fail fast with a clear message instead of surfacing a cryptic error
-        # only on the first AI call.
-        raise RuntimeError(
-            "OPENAI_API_KEY is not set. Set it in the environment (or a .env "
-            "file) before starting the server."
-        )
-    await check_database_permissions()
 
 @app.get("/api/health")
 async def health_check():
@@ -247,7 +264,7 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
         print("📞 Calling OpenAI API...")
         start_time = datetime.now()
         
-        response = openai_client.chat.completions.create(
+        response = await openai_client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": f"You are a Chinese language teacher helping students learn vocabulary. Always respond with valid JSON. Translate to {topic_input.native_language}."},
@@ -271,8 +288,8 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
             print(f"✅ JSON parsing successful")
         except json.JSONDecodeError as e:
             print(f"❌ JSON parsing failed: {e}")
-            print(f"📄 Response content: {response_content[:500]}...")
-            raise HTTPException(status_code=500, detail=f"Invalid JSON response from AI: {str(e)}")
+            print("AI returned invalid JSON")
+            raise HTTPException(status_code=500, detail="Invalid JSON response from AI")
         
         vocabulary_items = []
         
@@ -291,7 +308,7 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
             "session_id": session_id,
             "topic": topic_input.topic,
             "native_language": topic_input.native_language,
-            "vocabulary": [item.dict() for item in vocabulary_items],
+            "vocabulary": [item.model_dump() for item in vocabulary_items],
             "created_at": datetime.now(),
             "dialogue_history": [],
             "status": "vocabulary_generated"
@@ -307,18 +324,16 @@ async def generate_vocabulary(topic_input: TopicInput) -> VocabularyResponse:
             vocabulary=vocabulary_items
         )
         
-    except Exception as e:
-        print(f"❌ Error in generate_vocabulary: {str(e)}")
-        print(f"❌ Error type: {type(e).__name__}")
-        import traceback
-        print(f"❌ Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Error generating vocabulary: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unable to generate vocabulary")
 
 @app.post("/api/start-dialogue")
 async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
     try:
         # Get session data
-        session = await get_session_data(message.session_id)
+        session = await get_session_data(str(message.session_id))
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -368,10 +383,11 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
         # Add current user message
         messages.append({"role": "user", "content": message.message})
         
-        response = openai_client.chat.completions.create(
+        response = await openai_client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
-            temperature=0.8
+            temperature=0.8,
+            max_tokens=3000
         )
         
         # Get the response content
@@ -396,6 +412,9 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
                 "errors_detected": []
             }
         
+        # Validate the provider response before changing stored conversation data.
+        validated_response = DialogueResponse(**ai_response)
+
         # Update dialogue history
         dialogue_history.extend([
             {
@@ -406,6 +425,7 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
             {
                 "message": ai_response["response"],
                 "is_user": False,
+                "errors_detected": ai_response["errors_detected"],
                 "timestamp": datetime.now()
             }
         ])
@@ -416,21 +436,18 @@ async def start_dialogue(message: DialogueMessage) -> DialogueResponse:
             "status": "dialogue_active",
             "last_updated": datetime.now()
         }
-        await update_session_data(message.session_id, update_data)
+        await update_session_data(str(message.session_id), update_data, session)
         
-        return DialogueResponse(
-            response=ai_response["response"],
-            translation=ai_response["translation"],
-            pinyin=ai_response["pinyin"],
-            suggestions=ai_response["suggestions"],
-            errors_detected=ai_response["errors_detected"]
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error in dialogue: {str(e)}")
+        return validated_response
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unable to process dialogue")
 
 @app.post("/api/get-dialogue-translation")
-async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
+async def get_dialogue_translation(session_id: UUID4) -> Dict[str, Any]:
+    session_id = str(session_id)
     try:
         # Get session data
         session = await get_session_data(session_id)
@@ -468,13 +485,14 @@ async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
         }}
         """
         
-        response = openai_client.chat.completions.create(
+        response = await openai_client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": f"You are a professional translator specializing in Chinese to {session['native_language']} translation. Respond only with valid JSON."},
                 {"role": "user", "content": translation_prompt}
             ],
-            temperature=0.3
+            temperature=0.3,
+            max_tokens=3000
         )
         
         # Try to parse the response
@@ -501,11 +519,14 @@ async def get_dialogue_translation(session_id: str) -> Dict[str, Any]:
             "translations": translation_data.get("dialogue_translations", [])
         }
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting dialogue translation: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unable to translate dialogue")
 
 @app.post("/api/end-session")
-async def end_session_and_generate_report(session_id: str) -> LearningReport:
+async def end_session_and_generate_report(session_id: UUID4) -> LearningReport:
+    session_id = str(session_id)
     try:
         # Get session data
         session = await get_session_data(session_id)
@@ -573,13 +594,14 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
         Make the report inspiring and educational!
         """
         
-        response = openai_client.chat.completions.create(
+        response = await openai_client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": f"You are an expert Chinese language teacher creating learning reports. Respond only with valid JSON. Be encouraging but constructive. Use {session['native_language']} for explanations."},
                 {"role": "user", "content": report_prompt}
             ],
-            temperature=0.6
+            temperature=0.6,
+            max_tokens=3000
         )
         
         # Try to parse the response
@@ -632,10 +654,10 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
         # Update session status
         update_data = {
             "status": "completed",
-            "learning_report": learning_report.dict(),
+            "learning_report": learning_report.model_dump(),
             "completed_at": datetime.now()
         }
-        await update_session_data(session_id, update_data)
+        await update_session_data(session_id, update_data, session)
         
         # Store in progress collection for user tracking (if database available)
         if DATABASE_AVAILABLE:
@@ -650,16 +672,19 @@ async def end_session_and_generate_report(session_id: str) -> LearningReport:
                     "created_at": datetime.now()
                 })
             except Exception as e:
-                print(f"❌ Could not save to progress collection: {str(e)}")
+                print(f"❌ Could not save to progress collection: {type(e).__name__}")
                 # Continue without failing - this is not critical
         
         return learning_report
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unable to generate report")
 
 @app.get("/api/session/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: UUID4):
+    session_id = str(session_id)
     try:
         session = await get_session_data(session_id)
         if not session:
@@ -670,8 +695,10 @@ async def get_session(session_id: str):
             session["_id"] = str(session["_id"])
         return session
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving session: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unable to retrieve session")
 
 if __name__ == "__main__":
     import uvicorn

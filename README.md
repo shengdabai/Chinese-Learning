@@ -47,18 +47,19 @@ This repository supports productized learning workflows: diagnostic input, guide
 Use the commands that match the current project state:
 
 ```bash
-yarn install
-yarn start
-yarn run build
-yarn run test
+cd frontend
+npm ci --registry=https://registry.npmjs.org
+npm start
+npm run build
+npm test
 ```
 
 | Command | Purpose |
 |---|---|
-| `yarn install` | Install project dependencies. |
-| `yarn start` | react-scripts start |
-| `yarn run build` | react-scripts build |
-| `yarn run test` | react-scripts test |
+| `npm ci --registry=https://registry.npmjs.org` | Install frontend dependencies from `frontend/`. |
+| `npm start` | Start the Vite development server. |
+| `npm run build` | Build the frontend with Vite. |
+| `npm test` | Run the focused frontend regression tests. |
 
 ## Operating Notes
 
